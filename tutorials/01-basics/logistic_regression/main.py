@@ -36,7 +36,7 @@ model = nn.Linear(input_size, num_classes)
 # Loss and optimizer
 # nn.CrossEntropyLoss() computes softmax internally
 criterion = nn.CrossEntropyLoss()  
-optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)  
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)  
 
 # Train the model
 total_step = len(train_loader)
