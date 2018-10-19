@@ -38,14 +38,22 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
 class NeuralNet(nn.Module):
     def __init__(self, input_size, hidden_size, num_classes):
         super(NeuralNet, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size) 
+        self.conv2 = nn.Conv2d(1,20,3)
+        self.pool = nn.MaxPool2d(2,2)
+        self.fc1 = nn.Linear(13*13*20, hidden_size) 
         self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, num_classes)  
+        self.fc3 = nn.Linear(hidden_size, num_classes)  
     
     def forward(self, x):
-        out = self.fc1(x)
+        #print('x.size():', x.size())
+        out = self.conv2(x)
+        #print('conv2d(x).size():', out.size())
+        out = self.pool(out)
+        #print('pooled size():', out.size())
+        out = self.fc1(out.view(out.size(0), -1))
         out = self.relu(out)
-        out = self.fc2(out)
+        out = self.fc3(out)
+        #print(out.size())
         return out
 
 model = NeuralNet(input_size, hidden_size, num_classes).to(device)
@@ -59,7 +67,7 @@ total_step = len(train_loader)
 for epoch in range(num_epochs):
     for i, (images, labels) in enumerate(train_loader):  
         # Move tensors to the configured device
-        images = images.reshape(-1, 28*28).to(device)
+        images = images.reshape(-1, 1, 28, 28).to(device)
         labels = labels.to(device)
         
         # Forward pass
@@ -81,7 +89,7 @@ with torch.no_grad():
     correct = 0
     total = 0
     for images, labels in test_loader:
-        images = images.reshape(-1, 28*28).to(device)
+        images = images.reshape(-1,1, 28,28).to(device)
         labels = labels.to(device)
         outputs = model(images)
         _, predicted = torch.max(outputs.data, 1)
