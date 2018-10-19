@@ -14,6 +14,8 @@ num_classes = 10
 num_epochs = 5
 batch_size = 100
 learning_rate = 0.001
+conv_channels1 = 20
+
 
 # MNIST dataset 
 train_dataset = torchvision.datasets.MNIST(root='../../data', 
@@ -38,9 +40,9 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
 class NeuralNet(nn.Module):
     def __init__(self, input_size, hidden_size, num_classes):
         super(NeuralNet, self).__init__()
-        self.conv2 = nn.Conv2d(1,20,3)
+        self.conv2 = nn.Conv2d(1,conv_channels1,3,padding=1)
         self.pool = nn.MaxPool2d(2,2)
-        self.fc1 = nn.Linear(13*13*20, hidden_size) 
+        self.fc1 = nn.Linear(14*14*conv_channels1, hidden_size) 
         self.relu = nn.ReLU()
         self.fc3 = nn.Linear(hidden_size, num_classes)  
     
