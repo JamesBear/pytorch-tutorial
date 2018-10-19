@@ -26,21 +26,26 @@ class Corpus(object):
         # Add words to the dictionary
         with open(path, 'r') as f:
             tokens = 0
-            for line in f:
-                words = line.split() + ['<eos>']
-                tokens += len(words)
-                for word in words: 
-                    self.dictionary.add_word(word)  
+            #for line in f:
+            #    words = line.split() + ['<eos>']
+            #    tokens += len(words)
+            #    #for word in words: 
+            content = f.read()
+            for c in content: 
+                self.dictionary.add_word(c)
+        tokens = len(content)
         
         # Tokenize the file content
         ids = torch.LongTensor(tokens)
         token = 0
-        with open(path, 'r') as f:
-            for line in f:
-                words = line.split() + ['<eos>']
-                for word in words:
-                    ids[token] = self.dictionary.word2idx[word]
-                    token += 1
+        for token, c in enumerate(content):
+            ids[token] = self.dictionary.word2idx[c]
+        #with open(path, 'r') as f:
+        #    for line in f:
+        #        words = line.split() + ['<eos>']
+        #        for word in words:
+        #            ids[token] = self.dictionary.word2idx[word]
+        #            token += 1
         num_batches = ids.size(0) // batch_size
         ids = ids[:num_batches*batch_size]
         return ids.view(batch_size, -1)
