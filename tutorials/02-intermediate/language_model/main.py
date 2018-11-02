@@ -15,7 +15,7 @@ embed_size = 128
 hidden_size = 1024
 num_layers = 1
 num_epochs = 5
-num_samples = 1000     # number of words to be sampled
+num_samples = 10000     # number of words to be sampled
 batch_size = 20
 seq_length = 30
 learning_rate = 0.002
@@ -26,6 +26,20 @@ ids = corpus.get_data('data/shakespeare.txt', batch_size)
 vocab_size = len(corpus.dictionary)
 num_batches = ids.size(1) // seq_length
 
+infer_mode = False
+
+model_path = "model.ckpt"
+
+import sys
+
+if len(sys.argv) > 1 and sys.argv[1] == 'infer':
+    infer_mode = True
+
+if infer_mode:
+    print("Inference mode..")
+else:
+    print("Training mode..")
+    print("If you want to run it in inference mode, try 'python main.py infer'")
 
 # RNN based language model
 class RNNLM(nn.Module):
@@ -59,32 +73,38 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 def detach(states):
     return [state.detach() for state in states]
 
-# Train the model
-for epoch in range(num_epochs):
-    # Set initial hidden and cell states
-    states = (torch.zeros(num_layers, batch_size, hidden_size).to(device),
-              torch.zeros(num_layers, batch_size, hidden_size).to(device))
+if not infer_mode:
+    # Train the model
+    for epoch in range(num_epochs):
+        # Set initial hidden and cell states
+        states = (torch.zeros(num_layers, batch_size, hidden_size).to(device),
+                torch.zeros(num_layers, batch_size, hidden_size).to(device))
 
-    for i in range(0, ids.size(1) - seq_length, seq_length):
-        # Get mini-batch inputs and targets
-        inputs = ids[:, i:i+seq_length].to(device)
-        targets = ids[:, (i+1):(i+1)+seq_length].to(device)
+        for i in range(0, ids.size(1) - seq_length, seq_length):
+            # Get mini-batch inputs and targets
+            inputs = ids[:, i:i+seq_length].to(device)
+            targets = ids[:, (i+1):(i+1)+seq_length].to(device)
 
-        # Forward pass
-        states = detach(states)
-        outputs, states = model(inputs, states)
-        loss = criterion(outputs, targets.reshape(-1))
+            # Forward pass
+            states = detach(states)
+            outputs, states = model(inputs, states)
+            loss = criterion(outputs, targets.reshape(-1))
 
-        # Backward and optimize
-        model.zero_grad()
-        loss.backward()
-        clip_grad_norm(model.parameters(), 0.5)
-        optimizer.step()
+            # Backward and optimize
+            model.zero_grad()
+            loss.backward()
+            clip_grad_norm(model.parameters(), 0.5)
+            optimizer.step()
 
-        step = (i+1) // seq_length
-        if step % 100 == 0:
-            print ('Epoch [{}/{}], Step[{}/{}], Loss: {:.4f}, Perplexity: {:5.2f}'
-                   .format(epoch+1, num_epochs, step, num_batches, loss.item(), np.exp(loss.item())))
+            step = (i+1) // seq_length
+            if step % 100 == 0:
+                print ('Epoch [{}/{}], Step[{}/{}], Loss: {:.4f}, Perplexity: {:5.2f}'
+                    .format(epoch+1, num_epochs, step, num_batches, loss.item(), np.exp(loss.item())))
+else:
+    if torch.cuda.is_available():
+        model.load_state_dict(torch.load(model_path))
+    else:
+        model.load_state_dict(torch.load(model_path, map_location='cpu'))
 
 # Test the model
 with torch.no_grad():
@@ -116,5 +136,6 @@ with torch.no_grad():
             if (i+1) % 100 == 0:
                 print('Sampled [{}/{}] words and save to {}'.format(i+1, num_samples, 'sample.txt'))
 
-# Save the model checkpoints
-torch.save(model.state_dict(), 'model.ckpt')
+if not infer_mode:
+    # Save the model checkpoints
+    torch.save(model.state_dict(), model_path)
