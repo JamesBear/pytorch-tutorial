@@ -46,7 +46,8 @@ class RNNLM(nn.Module):
     def __init__(self, vocab_size, embed_size, hidden_size, num_layers):
         super(RNNLM, self).__init__()
         self.embed = nn.Embedding(vocab_size, embed_size)
-        self.lstm = nn.LSTM(embed_size, hidden_size, num_layers, batch_first=True)
+        #self.lstm = nn.LSTM(embed_size, hidden_size, num_layers, batch_first=True)
+        self.rnn = nn.RNN(embed_size, hidden_size, num_layers, batch_first=True)
         self.linear = nn.Linear(hidden_size, vocab_size)
 
     def forward(self, x, h):
@@ -54,14 +55,16 @@ class RNNLM(nn.Module):
         x = self.embed(x)
 
         # Forward propagate LSTM
-        out, (h, c) = self.lstm(x, h)
+        #out, (h, c) = self.lstm(x, h)
+        out, h = self.rnn(x, h)
 
         # Reshape output to (batch_size*sequence_length, hidden_size)
         out = out.reshape(out.size(0)*out.size(1), out.size(2))
+        #out = out.reshape(out.size(0)*out.size(1), out.size(2))
 
         # Decode hidden states of all time steps
         out = self.linear(out)
-        return out, (h, c)
+        return out, h#(h, c)
 
 model = RNNLM(vocab_size, embed_size, hidden_size, num_layers).to(device)
 
@@ -71,14 +74,16 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 # Truncated backpropagation
 def detach(states):
-    return [state.detach() for state in states]
+    return states.detach()
+    #return [state.detach() for state in states]
 
 if not infer_mode:
     # Train the model
     for epoch in range(num_epochs):
         # Set initial hidden and cell states
-        states = (torch.zeros(num_layers, batch_size, hidden_size).to(device),
-                torch.zeros(num_layers, batch_size, hidden_size).to(device))
+        states = torch.zeros(num_layers, batch_size, hidden_size).to(device)
+        #states = (torch.zeros(num_layers, batch_size, hidden_size).to(device),
+        #        torch.zeros(num_layers, batch_size, hidden_size).to(device))
 
         for i in range(0, ids.size(1) - seq_length, seq_length):
             # Get mini-batch inputs and targets
@@ -106,12 +111,14 @@ else:
     else:
         model.load_state_dict(torch.load(model_path, map_location='cpu'))
 
+
 # Test the model
 with torch.no_grad():
     with open('sample.txt', 'w') as f:
         # Set intial hidden ane cell states
-        state = (torch.zeros(num_layers, 1, hidden_size).to(device),
-                 torch.zeros(num_layers, 1, hidden_size).to(device))
+        state = torch.zeros(num_layers, 1, hidden_size).to(device)
+        #state = (torch.zeros(num_layers, 1, hidden_size).to(device),
+        #         torch.zeros(num_layers, 1, hidden_size).to(device))
 
         # Select one word id randomly
         prob = torch.ones(vocab_size)
