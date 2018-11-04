@@ -59,12 +59,12 @@ class RNNLM(nn.Module):
         out, h = self.rnn(x, h)
 
         # Reshape output to (batch_size*sequence_length, hidden_size)
-        out = out.reshape(out.size(0)*out.size(1), out.size(2))
+        #out = out.reshape(out.size(0)*out.size(1), out.size(2))
         #out = out.reshape(out.size(0)*out.size(1), out.size(2))
 
         # Decode hidden states of all time steps
         out = self.linear(out)
-        return out, h#(h, c)
+        return out.reshape(out.size(0)*out.size(1), -1), h.reshape(1, h.size(0)*h.size(1), -1)#(h, c)
 
 model = RNNLM(vocab_size, embed_size, hidden_size, num_layers).to(device)
 
